@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.2 Aaron Wolf 14dec2020}{...}
+{* *! version 2.0.1 Aaron Wolf 14dec2020}{...}
 {title:Title}
 
 {phang}
@@ -12,8 +12,10 @@
 {cmd: difftab} {opt store} {help name} {opt ,} {opth v:arlist(fvvarlist)} [{opth i(numlist)} {opth ref:erence(real)}]
 
 {p 8 17 2}
-{cmd: difftab} {opt write} {help namelist} [{opt using} {it:filename}] [{opt ,} {help esttab:esttab_options} ]
+{cmd: difftab} {opt add} {help anything} [{opt ,} {help estadd:estadd_options} ]
 
+{p 8 17 2}
+{cmd: difftab} {opt write} {help namelist} [{opt using} {it:filename}] [{opt ,} {help esttab:esttab_options} ]
 
 
 {* Using -help odkmeta- as a template.}{...}
@@ -22,9 +24,15 @@
 {synopthdr}
 {synoptline}
 
+{p 4}{it:difftab store} {p_end}
 {synopt:{opth v:arlist(fvvarlist)}}3-way interaction {help fvvarlist:factor} variable list (e.g. var1##var2##var3). {p_end}
 {synopt:{opth i(numlist)}}List of levels for each variable in {opth v:arlist(fvvarlist)} to be considered "on". Default is {opt i(1 1 1)}. {p_end}
 {synopt:{opth ref:erence(real)}}Mean value for base group. Default is to use the estimate of _cons from the regression.{p_end}
+
+{p 4}{it:difftab add} {p_end}
+{synopt:{help estadd:estadd_options}}Any valid options specified in {help estadd}. {p_end}
+
+{p 4}{it:difftab write} {p_end}
 {synopt:{help esttab:esttab_options}}Any valid options specified in {help esttab}. {p_end}
 {synoptline}
 
@@ -39,12 +47,19 @@ Duflo (2001), Table 3.
 
 {pstd}
 {cmd: difftab store} is the equivalent post-estimation command to {help eststo},
-storing the factor combinations in matrix {help name}.
+storing the factor combinations in e(b_difftab) for estimate {help name}.
+
+{pstd}
+{cmd: difftab add} is a wrapper for {help estadd}, and ensures that added 
+scalars, macros, and matrices are added to the model for use in {cmd: difftab write}.
+Scalars and macros added using {help estadd} alone will not appear in a table
+created using {cmd: difftab write}. {cmd:difftab add} can be used exactly as 
+{help estadd}.
 
 {pstd}
 {cmd: difftab write} writes matrices prepared using {cmd: difftab store} using
 {help esttab}. Any valid esttab or estout options can be added to {cmd: difftab write}.
-Users can specify a file with {hepl using}, or choose not to specify a filename
+Users can specify a file with {help using}, or choose not to specify a filename
 (this will write the table to the Stata output window). {cmd: difftab write} is,
 at its core, a wrapper for {help esttab}.
 
@@ -122,25 +137,28 @@ Store results and write a basic table:
 	{cmd:.} {cmd: difftab write est1}
 
 {pstd}
-We can results from multiple models:
+We can results from multiple models, as well as add scalars and/or macros:
 
-	{cmd:.} {cmd: reg hours married##collgrad##union, r}
-	{cmd:.} {cmd: difftab store est2, varlist(married##collgrad##union)}
-	{cmd:.} {cmd: difftab write est1 est2}
+	{cmd:.} {cmd: reg wage married##collgrad##union i.industry, r}
+	{cmd:.} {cmd: sum `e(depvar)' if e(sample) & married==0 & collgrad==0 & union==0}
+	{cmd:.} {cmd: difftab store est2, varlist(married##collgrad##union) reference(`r(mean)')}
+	{cmd:.} {cmd: difftab add local FE "Yes"}
 	
-{title:Changing the Reference Value}	
-	
+	{cmd:.} {cmd: difftab write est1 est2, scalars(FE)}
+
+{title:Changing the Reference Value}
+
 {pstd}
-We may wish to specify the "base" value for the caste when all indicators are off 
+We may wish to specify the "base" value for the caste when all indicators are off
 (=0 by default). For example, suppose we ran the following regression:
 
 	{cmd:.} {cmd: reg hours married##collgrad##union i.industry, r}
 
 {pstd}
-Now, our base value, _cons, is no longer as informative, as it represents the 
-average number of hours worked for workers where marries == 0, collgrad == 0, 
-and union == 0, but {it:also} where industry = "Ag/Forestry/Fisheries" (the 
-omitted category).  
+Now, our base value, _cons, is no longer as informative, as it represents the
+average number of hours worked for workers where marries == 0, collgrad == 0,
+and union == 0, but {it:also} where industry = "Ag/Forestry/Fisheries" (the
+omitted category).
 
 {pstd}
 Often, we would prefer to set all cells relative to the average level of hours
@@ -151,11 +169,15 @@ for all workers. We could do this with the following:
 	{cmd:.} {cmd: difftab store est, varlist(married##collgrad##union) reference(`r(mean)')}
 	
 {pstd}
-{bf: Note:} Using a reference category affects the standard errors when 
+When using {opt ref:erence}, {cmd: difftab store} will automatically store the 
+reference value in e(reference) for the active model.
+
+{pstd}
+{bf: Note:} Using a reference category affects the standard errors when
 calculating the other cells. This is because {cmd: difftab} calculates F-tests
 for the linear combination (e.g. _cons + 1.married = 0). When _cons is replaced
-with a real value, the standard errors change (as the real value no longer has 
-any variation).	
+with a real value, the standard errors change (as the real value no longer has
+any variation).
 
 {title:Author}
 

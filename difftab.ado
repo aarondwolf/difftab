@@ -1,8 +1,8 @@
-*! version 1.0.2  14dec2020 Aaron Wolf, aaron.wolf@yale.edu	
+*! version 2.0.1  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
 cap program drop difftab
-program define difftab, rclass
+program define difftab, eclass
 
-	syntax anything [using] [, Varlist(passthru) i(passthru) REFerence(passthru) * ]
+	syntax anything, [*]
 
 	* Require esttab
 	cap which esttab
@@ -12,12 +12,32 @@ program define difftab, rclass
 	}
 
 //	Capture write or store option
-	gettoken cmd namelist: anything
-	cap assert inlist("`cmd'","store","write")
+	gettoken cmd anything: anything
+	cap assert inlist("`cmd'","store","write","add")
 		if _rc error 198
 
 //	Run appropriate program
-	difftab_`cmd' `namelist' `using', `varlist' `i' `reference' `options'
+	difftab_`cmd' `anything', `options'
+	
+//	If difftab_store is run, add e-class results
+	if "`cmd'" == "store" {
+		* Add est name
+		qui ereturn local name `r(name)'
+		
+		* Add reference (if non-missing)
+		if "`r(reference)'" != "" qui ereturn scalar reference = r(reference)
+		
+		* Add difftab matrix
+		tempname DT
+		matrix `DT' = r(b_difftab)
+		qui ereturn matrix b_difftab = `DT'
+		
+		* Store results and hold to restore later with difftab write
+		qui eststo `r(name)'
+		cap _estimates drop DT_`r(name)'
+		_estimates hold DT_`r(name)', copy
+	}
+
 
 end
 
@@ -41,10 +61,7 @@ program define difftab_store, rclass
 
 	* Replace i with 1s if not specified
 	if "`i'" == "" local i 1 1 1
-
-//	Create "N" vector
-	mat `namelist'N = . , `e(N)' , .
-
+	
 //	Isolate the 2/3 variables, and the appropriate factor levels
 	* Isolate variable 1, 2, and 3
 	local level1: word 2 of `varlist'
@@ -147,8 +164,8 @@ qui {
 		mat `C33' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
 }
 
-	cap mat drop `namelist'
-	mat `namelist' = 	`A11' , `A12' , `A13' \ ///
+	tempname `namelist'
+	mat ``namelist'' = 	`A11' , `A12' , `A13' \ ///
 							`A21' , `A22' , `A23' \ ///
 							`A31' , `A32' , `A33' \ ///
 							`B11' , `B12' , `B13' \ ///
@@ -172,9 +189,13 @@ qui {
 		}
 	}
 
-	mat colnames `namelist' = `colnames'
-	mat rownames `namelist' = `rownames'
-
+	mat colnames ``namelist'' = `colnames'
+	mat rownames ``namelist'' = `rownames'
+	
+	* Return namelist in r
+	qui return local name  "`namelist'"
+	qui return matrix b_difftab = ``namelist''
+	if "`reference'" != "" qui return scalar reference = `reference'
 
 end
 
@@ -182,35 +203,52 @@ cap program drop difftab_write
 program define difftab_write, eclass
 
 	syntax namelist [using] [, *]
-	confirm matrix `namelist'
-
-	local nmat: word count `namelist'
-	local ncol = `nmat'*3
-
+	
+	* Parse scalars added in options
+	
+	
 	* For each result, create three columns in ereturn post
-	tempname tmp b
-	foreach mat in `namelist' {
-		local coleq: coleq `mat'
+	tempname mat tmp b
+	foreach est in `namelist' {
+		* Load estimation results stored in temp matrix
+		_estimates unhold DT_`est'
+		_estimates hold DT_`est', copy
+		
+		* Get unique column eq titles for use as mtitles
+		local coleq: coleq e(b_difftab)
 		local coleq: list uniq coleq
 		local mtitles `mtitles' `coleq'
+		
+		* Store each column set as separate model
 		forvalues i = 1/3 {
+			* Load estimation results stored in temp matrix
+			_estimates unhold DT_`est'
+			_estimates hold DT_`est', copy
+			mat `mat' = e(b_difftab)
+			
+			* Pull first/second/third 7 columns into temp mat
 			local col1 = (`i'-1)*7 + 1
 			local col7 = (`i'-1)*7 + 7
 			mat `tmp' = `mat'[1...,`col1'..`col7']
+			
+			* Repost column 1 as b
 			local colnames: colnames `tmp'
 			mat colnames `tmp' = `colnames'
 			mat coleq `tmp' = ""
 			mat `b' = `tmp'[1...,"estimate"]'
-			ereturn post `b'
+			ereturn post `b', noclear
+			
+			* Loop over column names and write matrices of lincom results
 			foreach col of local colnames {
 				qui estadd matrix `col' = `tmp'[1...,"`col'"]'
 			}
-			if `i' == 2 qui estadd scalar N = `mat'N[1,2]
-			eststo `mat'`i'
-			local models `models' `mat'`i'
+			eststo `est'`i'
+			local models `models' `est'`i'
 		}
 	}
+	
 
+	
 	* If mtitles is specified in options, do not print mtitles
 	if 	regexm(`"`options'"',"(mti\()") | ///
 		regexm(`"`options'"',"(mtit\()") | ///
@@ -225,3 +263,20 @@ program define difftab_write, eclass
 
 
 end
+
+cap program drop difftab_add
+program define difftab_add
+
+	syntax anything, [*]
+	
+	* Run esttad command
+	estadd `anything', `options'
+	
+	* Store results and hold to restore later with difftab write
+	qui eststo `e(name)'
+	cap _estimates drop DT_`e(name)'
+	_estimates hold DT_`e(name)', copy
+	
+
+end
+
