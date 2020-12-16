@@ -1,6 +1,6 @@
 clear
 
-net install difftab, from("aarondwolf.github.io/difftab")
+net install difftab, from("https://aarondwolf.github.io/difftab")
 
 sysuse nlsw88, clear
 
