@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.1 Aaron Wolf 14dec2020}{...}
+{* *! version 2.0.2 Aaron Wolf 14dec2020}{...}
 {title:Title}
 
 {phang}
@@ -50,10 +50,10 @@ Duflo (2001), Table 3.
 storing the factor combinations in e(b_difftab) for estimate {help name}.
 
 {pstd}
-{cmd: difftab add} is a wrapper for {help estadd}, and ensures that added 
+{cmd: difftab add} is a wrapper for {help estadd}, and ensures that added
 scalars, macros, and matrices are added to the model for use in {cmd: difftab write}.
 Scalars and macros added using {help estadd} alone will not appear in a table
-created using {cmd: difftab write}. {cmd:difftab add} can be used exactly as 
+created using {cmd: difftab write}. {cmd:difftab add} can be used exactly as
 {help estadd}.
 
 {pstd}
@@ -143,7 +143,7 @@ We can results from multiple models, as well as add scalars and/or macros:
 	{cmd:.} {cmd: sum `e(depvar)' if e(sample) & married==0 & collgrad==0 & union==0}
 	{cmd:.} {cmd: difftab store est2, varlist(married##collgrad##union) reference(`r(mean)')}
 	{cmd:.} {cmd: difftab add local FE "Yes"}
-	
+
 	{cmd:.} {cmd: difftab write est1 est2, scalars(FE)}
 
 {title:Changing the Reference Value}
@@ -167,9 +167,9 @@ for all workers. We could do this with the following:
 	{cmd:.} {cmd: reg hours married##collgrad##union i.industry, r}
 	{cmd:.} {cmd: sum `e(depvar)' if e(sample) & married==0 & collgrad==0 & union==0}
 	{cmd:.} {cmd: difftab store est, varlist(married##collgrad##union) reference(`r(mean)')}
-	
+
 {pstd}
-When using {opt ref:erence}, {cmd: difftab store} will automatically store the 
+When using {opt ref:erence}, {cmd: difftab store} will automatically store the
 reference value in e(reference) for the active model.
 
 {pstd}

@@ -21,8 +21,10 @@ esttab est1 est2, scalars(FE reference) nobaselevels
 * difftab write will write the differences matrix (stored in e(b_difftab))
 difftab write est1 est2, scalars(FE)
 
+
 * All esttab options can be added (difftab write is a wrapper for esttab)
-difftab write est1 est2, scalars(FE) ///
+difftab write est1 est2 using test.tex, scalars(FE) replace ///
+	title(Test) ///
 	eqlabels("Panel A: Union" "Panel B: Non-Union" "Panel C: Difference (Union - Non-Union)") ///
 	mtitles(Married Single "Difference (Married - Single)" Married Single "Difference (Married - Single)") ///
 	varlabels(1.collgrad "College Graduate" 0.collgrad "Non-College Graduate" D.collgrad "Difference (Grad - Non-Grad)") ///
