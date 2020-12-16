@@ -1,0 +1,7 @@
+v 1.0.1
+d difftab.  Create triple difference tables with estout
+d Created by Aaron Wolf (aaron.wolf@yale.edu)
+d
+
+F difftab.ado
+F difftab.sthlp

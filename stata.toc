@@ -1,0 +1,8 @@
+v 1.0.1
+d Created by Aaron Wolf (aaron.wolf@yale.edu)
+
+d 	Installation instructions:
+d	net install difftab, from("https://aarondwolf.github.io/difftab/") replace
+d
+
+p difftab  Create triple difference tables with estout
