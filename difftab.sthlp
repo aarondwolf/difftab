@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.1 Aaron Wolf 14dec2020}{...}
+{* *! version 1.0.2 Aaron Wolf 14dec2020}{...}
 {title:Title}
 
 {phang}
@@ -9,7 +9,7 @@
 {title:Syntax}
 
 {p 8 17 2}
-{cmd: difftab} {opt store} {help name} {opt ,} {opth v:arlist(fvvarlist)} [{opth i(numlist)}]
+{cmd: difftab} {opt store} {help name} {opt ,} {opth v:arlist(fvvarlist)} [{opth i(numlist)} {opth ref:erence(real)}]
 
 {p 8 17 2}
 {cmd: difftab} {opt write} {help namelist} [{opt using} {it:filename}] [{opt ,} {help esttab:esttab_options} ]
@@ -24,6 +24,7 @@
 
 {synopt:{opth v:arlist(fvvarlist)}}3-way interaction {help fvvarlist:factor} variable list (e.g. var1##var2##var3). {p_end}
 {synopt:{opth i(numlist)}}List of levels for each variable in {opth v:arlist(fvvarlist)} to be considered "on". Default is {opt i(1 1 1)}. {p_end}
+{synopt:{opth ref:erence(real)}}Mean value for base group. Default is to use the estimate of _cons from the regression.{p_end}
 {synopt:{help esttab:esttab_options}}Any valid options specified in {help esttab}. {p_end}
 {synoptline}
 
@@ -126,7 +127,35 @@ We can results from multiple models:
 	{cmd:.} {cmd: reg hours married##collgrad##union, r}
 	{cmd:.} {cmd: difftab store est2, varlist(married##collgrad##union)}
 	{cmd:.} {cmd: difftab write est1 est2}
+	
+{title:Changing the Reference Value}	
+	
+{pstd}
+We may wish to specify the "base" value for the caste when all indicators are off 
+(=0 by default). For example, suppose we ran the following regression:
 
+	{cmd:.} {cmd: reg hours married##collgrad##union i.industry, r}
+
+{pstd}
+Now, our base value, _cons, is no longer as informative, as it represents the 
+average number of hours worked for workers where marries == 0, collgrad == 0, 
+and union == 0, but {it:also} where industry = "Ag/Forestry/Fisheries" (the 
+omitted category).  
+
+{pstd}
+Often, we would prefer to set all cells relative to the average level of hours
+for all workers. We could do this with the following:
+
+	{cmd:.} {cmd: reg hours married##collgrad##union i.industry, r}
+	{cmd:.} {cmd: sum `e(depvar)' if e(sample) & married==0 & collgrad==0 & union==0}
+	{cmd:.} {cmd: difftab store est, varlist(married##collgrad##union) reference(`r(mean)')}
+	
+{pstd}
+{bf: Note:} Using a reference category affects the standard errors when 
+calculating the other cells. This is because {cmd: difftab} calculates F-tests
+for the linear combination (e.g. _cons + 1.married = 0). When _cons is replaced
+with a real value, the standard errors change (as the real value no longer has 
+any variation).	
 
 {title:Author}
 

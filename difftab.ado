@@ -1,8 +1,8 @@
-*! version 1.0.1  14dec2020 Aaron Wolf, aaron.wolf@yale.edu	
+*! version 1.0.2  14dec2020 Aaron Wolf, aaron.wolf@yale.edu	
 cap program drop difftab
 program define difftab, rclass
 
-	syntax anything [using] [, Varlist(passthru) i(passthru) * ]
+	syntax anything [using] [, Varlist(passthru) i(passthru) REFerence(passthru) * ]
 
 	* Require esttab
 	cap which esttab
@@ -17,16 +17,17 @@ program define difftab, rclass
 		if _rc error 198
 
 //	Run appropriate program
-	difftab_`cmd' `namelist' `using', `varlist' `i' `options'
+	difftab_`cmd' `namelist' `using', `varlist' `i' `reference' `options'
 
 end
 
 cap program drop difftab_store
 program define difftab_store, rclass
 
-	syntax name [, Varlist(varlist fv) i(numlist max=3 ) ]
+	syntax name , Varlist(varlist fv) [i(numlist max=3 ) REFerence(string) ]
 
-	confirm name DT_`namelist'
+	confirm name `namelist'
+	if "`reference'" != "" confirm number `reference'
 
 //	Syntax Checks
 	* Ensure there are 3-way interactions
@@ -75,6 +76,10 @@ program define difftab_store, rclass
 		local alpha: word `i' of `c(ALPHA)'
 		local `alpha': word `i' of `varlist'
 	}
+	
+	* Replace the constant (A) with the value of reference if specified
+	if "`reference'" != "" local A `reference'
+	else local A _cons
 
 //	Construct vectors of all 27 possible linear combinations
 	tempname A11 A12 A13 A21 A22 A23 A31 A32 A33 B11 B12 B13 B21 B22 B23 B31 B32 B33 C11 C12 C13 C21 C22 C23 C31 C32 C33
