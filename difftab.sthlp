@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.2 Aaron Wolf 14dec2020}{...}
+{* *! version 2.0.3 Aaron Wolf 14dec2020}{...}
 {title:Title}
 
 {phang}
@@ -9,7 +9,7 @@
 {title:Syntax}
 
 {p 8 17 2}
-{cmd: difftab} {opt store} {help name} {opt ,} {opth v:arlist(fvvarlist)} [{opth i(numlist)} {opth ref:erence(real)}]
+{cmd: difftab} {opt store} {help name} {opt ,} {opth v:arlist(fvvarlist)}
 
 {p 8 17 2}
 {cmd: difftab} {opt add} {help anything} [{opt ,} {help estadd:estadd_options} ]
@@ -26,8 +26,6 @@
 
 {p 4}{it:difftab store} {p_end}
 {synopt:{opth v:arlist(fvvarlist)}}3-way interaction {help fvvarlist:factor} variable list (e.g. var1##var2##var3). {p_end}
-{synopt:{opth i(numlist)}}List of levels for each variable in {opth v:arlist(fvvarlist)} to be considered "on". Default is {opt i(1 1 1)}. {p_end}
-{synopt:{opth ref:erence(real)}}Mean value for base group. Default is to use the estimate of _cons from the regression.{p_end}
 
 {p 4}{it:difftab add} {p_end}
 {synopt:{help estadd:estadd_options}}Any valid options specified in {help estadd}. {p_end}
@@ -47,7 +45,7 @@ Duflo (2001), Table 3.
 
 {pstd}
 {cmd: difftab store} is the equivalent post-estimation command to {help eststo},
-storing the factor combinations in e(b_difftab) for estimate {help name}.
+storing the factor combinations in e(b_difftab) for estimate {help name}. 
 
 {pstd}
 {cmd: difftab add} is a wrapper for {help estadd}, and ensures that added
@@ -63,6 +61,39 @@ Users can specify a file with {help using}, or choose not to specify a filename
 (this will write the table to the Stata output window). {cmd: difftab write} is,
 at its core, a wrapper for {help esttab}.
 
+{title:Specifying base and comparison levels}
+
+{pstd}
+By default, {cmd: difftab store} will detect the base level used in the estimation,
+and use the first non-omitted, non-base-level factor level for any non-continuous
+variables in {opt v:arlist} as the "comparison" level (i.e. off and on).
+
+{pstd}
+For exmaple, suppose you had three variables, all 0/1 indicators. Then {cmd: difftab}
+would know that the base ("off") level for each is 0b.varname, and the comparison ("on") level for
+each is 1.varname.
+
+{pstd}
+If one (or more) of your variables has multiple factor levels (e.g. varname 
+takes on the values 1, 2, 3, and 4), then {cmd: difftab} would likewise detect
+that the base level is 1b.varname, and would assume the "on" level was
+the first non-omitted level (2.varname).
+
+{pstd}
+You can control which cmparisons{cmd: difftab} chooses to report using standard
+factor variable controls. Suppose you wanted to compare 4.varname (on) to 
+2.varname (off). Instead of making a new indicator, you could simply run your 
+regression using the same command:
+
+	{cmd:. reg y var1##var2##var3}
+	
+{pstd}
+Then in {cmd: difftab store} you would specify {cmd:4b2.varname} for the sppropriate
+variable in your {opt v:arlist}. If this was var3, then you would type:
+	
+	{cmd:. difftab store est1, varlist(var1}##{cmd:var2}##{cmd:4b2.var3)}
+	{cmd:. difftab write est1}
+
 {title:Formatting}
 
 {pstd}
@@ -70,7 +101,7 @@ at its core, a wrapper for {help esttab}.
 variable, and model labels:
 
 	{cmd:. reg y var1##var2##var3}
-	{cmd:. difftab store est1, varlist(var1##var2##var3)}
+	{cmd:. difftab store est1, varlist(var1}##{cmd:var2}##{cmd:var3)}
 	{cmd:. difftab write est1}
 
         {c TLC}{hline 40}{c TRC}

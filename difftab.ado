@@ -1,4 +1,4 @@
-*! version 2.0.2  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
+*! version 2.0.3  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
 cap program drop difftab
 program define difftab, eclass
 
@@ -44,76 +44,39 @@ end
 cap program drop difftab_store
 program define difftab_store, rclass
 
-	syntax name , Varlist(varlist fv) [ONlevels(numlist max=3 ) OFFlevels(numlist max=3 ) REFerence(string) ]
+	syntax name , Varlist(string) [REFerence(string) ]
 
 	confirm name `namelist'
 	if "`reference'" != "" confirm number `reference'
 
-//	Syntax Checks
-	* Ensure there are 3-way interactions
-	local varlist _cons `varlist'
-	local numvars: word count `varlist'
-	cap assert `numvars' == 8
-	if _rc {
-		di as error "Factor variable varlist must contain 3-way interactions"
-		error 198
-	}
+//	Parse Factor Variable list from varlist
+	difftab_fvparse `varlist'
 
-	* Replace levels with 1s if not specified
-	if "`onlevels'" == "" local onlevels 1 1 1
-	if "`offlevels'" == "" local offlevels 0 0 0
+	forvalues i = 1/3 {
+		* Create "on" version of variable for lincom
+		if "`r(type`i')'" == "factor" local var`i' `r(on`i')'.`r(varname`i')'
+		else if "`r(type`i')'" == "continuous" local var`i' c.`r(varname`i')'
 
-//	Isolate the 2/3 variables, and the appropriate factor levels
-	* Isolate variable 1, 2, and 3
-	local level1: word 2 of `varlist'
-	local level2: word 3 of `varlist'
-	local level3: word 5 of `varlist'
-
-	* Replace i.version with #.version (if specified) [Ignore c.]
-	forvalues j = 1/3 {
-		* Get clean version (for pulling titles)
-		local level`j': subinstr local level`j' "." " "
-		local varname`j' = cond(wordcount("`level`j''")==2,word("`level`j''",2),"`level`j''")
-		local level`j' = cond(wordcount("`level`j''")==2,"i."+word("`level`j''",2),"`level`j''")
-
-		* Get onlevels: Replace "i." in varlist with appropriate levels
-		if substr("`level`j''",1,2) == "i." {
-			gettoken level onlevels: onlevels
-			if "`level'" == "" local level 1
-			local var`j': subinstr local level`j' "i." "`level'."
-			local on`j' `level'
-		}
-		else {
-			local var`j' `level`j''
-			local on`j' 1
-		}
-		local varlist: subinstr local varlist "`level`j''" "`var`j''", all
-
-		* Get off levels
-		if substr("`level`j''",1,2) == "i." {
-			gettoken level offlevels: offlevels
-			if "`level'" == "" local level 0
-			local off`j' `level'
-		}
-		else {
-			local off`j' 0
+		* Store results as locals
+		foreach x in off on varname type {
+			local `x'`i' `r(`x'`i')'
 		}
 	}
 
 //	Store each set of interactions as a letter (A, B, C, D ... for _cons, 1.level1 1.level2 1.level1#1.level2, etc.)
-	forvalues i = 1/8 {
-		local alpha: word `i' of `c(ALPHA)'
-		local `alpha': word `i' of `varlist'
-	}
-
-	* Replace the constant (A) with the value of reference if specified
 	if "`reference'" != "" local A `reference'
 	else local A _cons
+	local B `var1'
+	local C `var2'
+	local D `var1'#`var2'
+	local E `var3'
+	local F `var1'#`var3'
+	local G `var2'#`var3'
+	local H `var1'#`var2'#`var3'
 
 //	Construct vectors of all 27 possible linear combinations
 	tempname A11 A12 A13 A21 A22 A23 A31 A32 A33 B11 B12 B13 B21 B22 B23 B31 B32 B33 C11 C12 C13 C21 C22 C23 C31 C32 C33
 
-//	Write Matrix
 qui {
 	* Panel A: Level 3 On
 	lincom `A' + `B' + `C' + `D' + `E' +  `F' + `G' + `H'
@@ -176,8 +139,9 @@ qui {
 		mat `C33' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
 }
 
+	* Store all 3 panels to estimate name
 	tempname `namelist'
-	mat ``namelist'' = 	`A11' , `A12' , `A13' \ ///
+	mat ``namelist'' = 		`A11' , `A12' , `A13' \ ///
 							`A21' , `A22' , `A23' \ ///
 							`A31' , `A32' , `A33' \ ///
 							`B11' , `B12' , `B13' \ ///
@@ -289,5 +253,91 @@ program define difftab_add
 	cap _estimates drop DT_`e(name)'
 	_estimates hold DT_`e(name)', copy
 
+
+end
+
+cap program drop difftab_fvparse
+program difftab_fvparse , rclass
+
+	syntax anything
+
+//	Confirm that anything can be expanded
+	fvexpand `anything'
+	cap assert "`r(fvops)'" == "true"
+	if _rc {
+		di as error "{opt v:arlist} must contain factor variable operations."
+		error 198
+	}
+
+//	Parse anything to collect vars 1-3
+	tokenize `anything', parse("##")
+	cap assert "`2'" == "#" & "`3'" == "#" & "`5'" == "#" & "`6'" == "#" & "`8'" == ""
+		if _rc {
+			di as error "Must specify complete 3-way interactions."
+			error 198
+		}
+	local factor1 `1'
+	local factor2 `4'
+	local factor3 `7'
+
+//	For each variable, parse c/i options and varname
+	forvalues j = 1/3 {
+		* Add i. if missing
+		tokenize "`factor`j''", parse(".")
+		if "`2'" == "" local factor`j' i.`factor`j''
+
+		* Split into pre, . , and varname
+		tokenize "`factor`j''", parse(".")
+		local varname`j' `3'
+	}
+
+//	Expand each list to extract base level (off) and comparison level (on)
+	foreach j in 3 2 1 {
+		qui fvexpand `factor`j''
+		local fvlist`j' `r(varlist)'
+
+		if "`r(fvops)'" == "true" {
+			local type`j' factor
+			if regexm("`r(varlist)'","([0-9]+)b.`varname`j''") local off`j' = regexs(1)
+
+			* Remove base level from list (if factor var)
+			local fvlist `r(varlist)'
+			local base `off`j''b.`varname`j''
+			local fvlist: list fvlist - base
+
+			* Remove omitted levels from list
+			while regexm("`fvlist'","([0-9]+)o.`varname`j''") {
+				local fvlist = regexr("`fvlist'","([0-9]+)o.`varname`j''","")
+			}
+			local fvlist: list uniq fvlist
+			local omitted delete.`varname`j''
+			local fvlist: list fvlist - omitted
+
+			* Choose first item in list as "on" level
+			tokenize `fvlist'
+			tokenize `1', parse(".")
+			local on`j' `1'
+		}
+		else {
+			local type`j' continuous
+			local on`j' 1
+			local off`j' 0
+		}
+	}
+
+//	Return locals
+	foreach j in 3 2 1 {
+		return scalar on`j' = `on`j''
+		return scalar off`j' = `off`j''
+
+		return local type`j' `type`j''
+		return local factor`j' `factor`j''
+		return local varname`j' `varname`j''
+		return local fvlist`j' `fvlist`j''
+	}
+
+//	Unabbreviate FV list
+	fvunab fvunab: `anything'
+	return local fvunab `fvunab'
 
 end

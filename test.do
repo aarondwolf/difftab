@@ -23,7 +23,7 @@ difftab write est1 est2, scalars(FE)
 
 
 * All esttab options can be added (difftab write is a wrapper for esttab)
-difftab write est1 est2 using test.tex, scalars(FE) replace ///
+difftab write est1 est2 using test.tex, scalars(FE) replace booktabs ///
 	title(Test) ///
 	eqlabels("Panel A: Union" "Panel B: Non-Union" "Panel C: Difference (Union - Non-Union)") ///
 	mtitles(Married Single "Difference (Married - Single)" Married Single "Difference (Married - Single)") ///

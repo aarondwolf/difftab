@@ -2,11 +2,11 @@
 \def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
 \caption{Test}
 \begin{tabular}{l*{6}{c}}
-\hline\hline
+\toprule
             &       Wages         &                     &                     &       Wages         &                     &                     \\
             &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}\\
             &\multicolumn{1}{c}{Married}&\multicolumn{1}{c}{Single}&\multicolumn{1}{c}{Difference (Married - Single)}&\multicolumn{1}{c}{Married}&\multicolumn{1}{c}{Single}&\multicolumn{1}{c}{Difference (Married - Single)}\\
-\hline
+\midrule
 Panel A: Union&                     &                     &                     &                     &                     &                     \\
 College Graduate&       9.997\sym{***}&       11.41\sym{***}&      -1.410         &       10.14\sym{***}&       11.41\sym{***}&      -1.269         \\
             &     (23.87)         &     (18.52)         &     (-1.89)         &     (21.43)         &     (17.19)         &     (-1.68)         \\
@@ -14,7 +14,7 @@ Non-College Graduate&       7.665\sym{***}&       8.044\sym{***}&      -0.379   
             &     (29.89)         &     (21.27)         &     (-0.83)         &     (23.79)         &     (19.77)         &     (-0.21)         \\
 Difference (Grad - Non-Grad)&       2.332\sym{***}&       3.363\sym{***}&      -1.031         &       2.998\sym{***}&       4.181\sym{***}&      -1.183         \\
             &      (4.75)         &      (4.65)         &     (-1.18)         &      (6.12)         &      (5.88)         &     (-1.38)         \\
-\hline
+\midrule
 Panel B: Non-Union&                     &                     &                     &                     &                     &                     \\
 College Graduate&       9.823\sym{***}&       10.64\sym{***}&      -0.816         &       10.01\sym{***}&       10.47\sym{***}&      -0.456         \\
             &     (29.04)         &     (20.93)         &     (-1.34)         &     (25.78)         &     (20.16)         &     (-0.78)         \\
@@ -22,7 +22,7 @@ Non-College Graduate&       6.350\sym{***}&       6.407\sym{***}&     -0.0572   
             &     (53.56)         &     (33.71)         &     (-0.26)         &     (29.70)         &         (.)         &     (-0.67)         \\
 Difference (Grad - Non-Grad)&       3.473\sym{***}&       4.232\sym{***}&      -0.759         &       3.715\sym{***}&       4.030\sym{***}&      -0.314         \\
             &      (9.69)         &      (7.80)         &     (-1.17)         &     (10.31)         &      (7.76)         &     (-0.51)         \\
-\hline
+\midrule
 Panel C: Difference (Union - Non-Union)&                     &                     &                     &                     &                     &                     \\
 College Graduate&       0.174         &       0.768         &      -0.594         &       0.133         &       0.945         &      -0.813         \\
             &      (0.32)         &      (0.96)         &     (-0.62)         &      (0.25)         &      (1.20)         &     (-0.86)         \\
@@ -30,10 +30,10 @@ Non-College Graduate&       1.315\sym{***}&       1.637\sym{***}&      -0.322   
             &      (4.65)         &      (3.87)         &     (-0.63)         &      (3.17)         &      (2.17)         &      (0.12)         \\
 Difference (Grad - Non-Grad)&      -1.141         &      -0.869         &      -0.272         &      -0.717         &       0.151         &      -0.869         \\
             &     (-1.88)         &     (-0.96)         &     (-0.25)         &     (-1.21)         &      (0.17)         &     (-0.82)         \\
-\hline
+\midrule
 \(N\)       &        1878         &        1878         &        1878         &        1865         &        1865         &        1865         \\
 FE          &          No         &          No         &          No         &         Yes         &         Yes         &         Yes         \\
-\hline\hline
+\bottomrule
 \multicolumn{7}{l}{\footnotesize \textit{t} statistics in parentheses}\\
 \multicolumn{7}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
 \end{tabular}
