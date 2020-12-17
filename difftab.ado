@@ -2,7 +2,7 @@
 cap program drop difftab
 program define difftab, eclass
 
-	syntax anything [using] [if] [in] [fweight  aweight  pweight  iweight], [*]
+	syntax anything [using] [=exp] [if] [in] , [*]
 
 	* Require esttab
 	cap which esttab
@@ -17,7 +17,7 @@ program define difftab, eclass
 		if _rc error 198
 
 //	Run appropriate program
-	difftab_`cmd' `anything' `using' `if' `in' `weight'`exp', `options'
+	difftab_`cmd' `anything' `using' `if' `in' `exp', `options'
 
 //	If difftab_store is run, add e-class results and store estimates
 	if "`cmd'" == "store" {
@@ -31,7 +31,7 @@ program define difftab, eclass
 		tempname DT
 		matrix `DT' = r(b_difftab)
 		qui ereturn matrix b_difftab = `DT'
-
+				
 		* Store results and hold to restore later with difftab write
 		qui eststo `r(name)'
 		cap _estimates drop DT_`r(name)'
@@ -104,6 +104,18 @@ program define difftab_store, rclass
 			local `x'`i' `r(`x'`i')'
 		}
 	}
+	
+	* Return locals
+	foreach j in 3 2 1 {
+		return scalar on`j' = `on`j''
+		return scalar off`j' = `off`j''
+
+		return local type`j' `type`j''
+		return local factor`j' `r(factor`j')'
+		return local varname`j' `varname`j''
+		return local fvlist`j' `r(fvlist`j')'
+	}
+	
 
 //	Store each set of interactions as a letter (A, B, C, D ... for _cons, 1.level1 1.level2 1.level1#1.level2, etc.)
 	* If reference == mean pull b from MEAN_table, else use reference, else use _cons
@@ -257,18 +269,23 @@ program define difftab_write, eclass
 			local col1 = (`i'-1)*7 + 1
 			local col7 = (`i'-1)*7 + 7
 			mat `tmp' = `mat'[1...,`col1'..`col7']
+			
+			* If i = 2, noclear (removes eclass results from 1 and 3)
+			if `i' == 2 local noclear noclear
+			else local noclear
 
 			* Repost column 1 as b
 			local colnames: colnames `tmp'
 			mat colnames `tmp' = `colnames'
 			mat coleq `tmp' = ""
 			mat `b' = `tmp'[1...,"estimate"]'
-			ereturn post `b', noclear
+			ereturn post `b', `noclear'
 
 			* Loop over column names and write matrices of lincom results
 			foreach col of local colnames {
 				qui estadd matrix `col' = `tmp'[1...,"`col'"]'
 			}
+						
 			eststo `est'`i'
 			local models `models' `est'`i'
 		}
@@ -294,10 +311,10 @@ end
 cap program drop difftab_add
 program define difftab_add
 
-	syntax anything, [*]
+	syntax anything [=exp], [*]
 
 	* Run esttad command
-	estadd `anything', `options'
+	estadd `anything' `exp', `options'
 
 	* Store results and hold to restore later with difftab write
 	qui eststo `e(name)'
