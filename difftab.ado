@@ -1,8 +1,8 @@
-*! version 2.0.3  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
+*! version 2.0.4  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
 cap program drop difftab
 program define difftab, eclass
 
-	syntax anything [using], [*]
+	syntax anything [using] [if] [in] [fweight  aweight  pweight  iweight], [*]
 
 	* Require esttab
 	cap which esttab
@@ -13,19 +13,19 @@ program define difftab, eclass
 
 //	Capture write or store option
 	gettoken cmd anything: anything
-	cap assert inlist("`cmd'","store","write","add")
+	cap assert inlist("`cmd'","store","write","add","mean")
 		if _rc error 198
 
 //	Run appropriate program
-	difftab_`cmd' `anything' `using', `options'
+	difftab_`cmd' `anything' `using' `if' `in' `weight'`exp', `options'
 
-//	If difftab_store is run, add e-class results
+//	If difftab_store is run, add e-class results and store estimates
 	if "`cmd'" == "store" {
 		* Add est name
 		qui ereturn local name `r(name)'
 
 		* Add reference (if non-missing)
-		if "`r(reference)'" != "" qui ereturn scalar reference = r(reference)
+		if "`r(reference)'" != "" qui ereturn local reference = r(reference)
 
 		* Add difftab matrix
 		tempname DT
@@ -38,6 +38,32 @@ program define difftab, eclass
 		_estimates hold DT_`r(name)', copy
 	}
 
+//	If difftab_mean is run, convert r-class results to e-class results
+	if "`cmd'" == "mean" {
+		*return list
+
+		* Collect all r-class results and save as e-class results instead
+		foreach type in scalars macros matrices {
+			* Collect names of all results of a certain type
+			local names: r(`type')
+
+			* Rename type to singular
+			if "`type'" == "scalars" local type scalar
+			if "`type'" == "macros" local type local
+			if "`type'" == "matrices" local type matrix
+
+			* Return all names as r-class result
+			foreach name of local names {
+				if inlist("`type'","scalar","local") ereturn `type' MEAN_`name' = r(`name')
+				else {
+					tempname `name'
+					mat ``name'' = r(`name')
+					ereturn matrix MEAN_`name' = ``name''
+				}
+			}
+		}
+	}
+
 
 end
 
@@ -47,7 +73,23 @@ program define difftab_store, rclass
 	syntax name , Varlist(string) [REFerence(string) ]
 
 	confirm name `namelist'
-	if "`reference'" != "" confirm number `reference'
+
+//	Check to see 'reference' specified. If so, check it is a mean or a number
+	if "`reference'" == "mean" {
+		* Ensure mean command was run
+		cap assert "`e(MEAN_table)'" != ""
+		if _rc {
+			di as error "{it:mean} can only be specified after {bf:difftab mean} has been run."
+			error 198
+		}
+		else {
+			tempname mean
+			mat `mean' = e(MEAN_table)
+		}
+	}
+	else if "`reference'" != "" {
+		confirm number `reference'
+	}
 
 //	Parse Factor Variable list from varlist
 	difftab_fvparse `varlist'
@@ -64,8 +106,11 @@ program define difftab_store, rclass
 	}
 
 //	Store each set of interactions as a letter (A, B, C, D ... for _cons, 1.level1 1.level2 1.level1#1.level2, etc.)
-	if "`reference'" != "" local A `reference'
+	* If reference == mean pull b from MEAN_table, else use reference, else use _cons
+	if "`reference'" == "mean" local A = `mean'["b",1]
+	else if "`reference'" != "" local A = `reference'
 	else local A _cons
+
 	local B `var1'
 	local C `var2'
 	local D `var1'#`var2'
@@ -107,8 +152,14 @@ qui {
 		mat `B13' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
 	lincom `A'+`B'
 		mat `B21' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
-	lincom `A'
-		mat `B22' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
+
+	* If reference = mean, use results from mean, else lincom
+	if "`reference'" == "mean" mat `B22' = `mean'["b",1], `mean'["se",1],`mean'["t",1],`mean'["pvalue",1],`mean'["ll",1],`mean'["ul",1],`mean'["df",1]
+	else {
+		lincom `A'
+			mat `B22' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
+	}
+
 	lincom `B'
 		mat `B23' = `r(estimate)', `r(se)',`r(t)',`r(p)',`r(lb)',`r(ub)',`r(df)'
 	lincom `C' + `D'
@@ -171,7 +222,7 @@ qui {
 	* Return namelist in r
 	qui return local name  "`namelist'"
 	qui return matrix b_difftab = ``namelist''
-	if "`reference'" != "" qui return scalar reference = `reference'
+	if "`reference'" != "" qui return local reference `reference'
 
 end
 
@@ -339,5 +390,50 @@ program difftab_fvparse , rclass
 //	Unabbreviate FV list
 	fvunab fvunab: `anything'
 	return local fvunab `fvunab'
+
+end
+
+cap program drop difftab_mean
+program define difftab_mean, rclass
+
+	syntax varname [if] [in] [fweight  aweight  pweight  iweight], [*]
+
+	* Preserve estimates in memory
+	tempname estimates
+	_estimates hold `estimates', copy
+
+	* Run mean command
+	mean `varlist' `if' `in' `weight'`exp', `options'
+	*ereturn list
+	*return list
+
+	* Collect r(table) and store as temporary matrix
+	tempname table
+	mat `table' = r(table)
+
+	* Collect all e-class results and save as r-class results instead
+	foreach type in scalars macros matrices {
+		* Collect names of all results of a certain type
+		local names: e(`type')
+
+		* Rename type to singular
+		if "`type'" == "scalars" local type scalar
+		if "`type'" == "macros" local type local
+		if "`type'" == "matrices" local type matrix
+
+		* Return all names as r-class result
+		foreach name of local names {
+			if inlist("`type'","scalar","local") return `type' `name' = e(`name')
+			else {
+				tempname `name'
+				mat ``name'' = e(`name')
+				return matrix `name' = ``name''
+			}
+		}
+	}
+
+	* Store results and hold to restore later with difftab write
+	_estimates unhold `estimates'
+	return matrix table = `table'
 
 end
