@@ -1,4 +1,4 @@
-*! version 2.0.4  16dec2020 Aaron Wolf, aaron.wolf@yale.edu	
+*! version 2.0.4  16dec2020 Aaron Wolf, aaron.wolf@u.northwestern.edu	
 cap program drop difftab
 program define difftab, eclass
 
